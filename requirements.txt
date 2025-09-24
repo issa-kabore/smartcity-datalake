@@ -3,4 +3,5 @@ requests
 streamlit
 openaq
 supabase
+prefect
 # minio
