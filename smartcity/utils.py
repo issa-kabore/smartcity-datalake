@@ -1,7 +1,16 @@
+import os
 from datetime import datetime, timedelta, timezone
 from typing import List, Any, Optional, Tuple
 import pandas as pd
 import pendulum
+from prefect.blocks.system import Secret
+
+
+def get_secret(name: str, env_var: str):
+    env = os.getenv("ENV")
+    if env == "prod" or os.getenv("PREFECT__FLOW_RUN_ID"):
+        return Secret.load(name).get()  # type: ignore
+    return os.getenv(env_var)
 
 
 def get_yesterday_utc_range():
@@ -18,8 +27,11 @@ def get_yesterday_local_range(history_days=2):
     return date_from.isoformat(), date_to.isoformat()
 
 
-def get_dates_range( start_date: Optional[str] = None, end_date: Optional[str] = None,
-                    history_days: int = 1) -> Tuple[str, str]:
+def get_dates_range(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    history_days: int = 1,
+) -> Tuple[str, str]:
     """
     Determines the start and end dates based on the provided parameters.
     Args:
@@ -35,15 +47,15 @@ def get_dates_range( start_date: Optional[str] = None, end_date: Optional[str] =
 
     elif start_date and not end_date:
         start_dt = pendulum.parse(start_date)
-        end_dt = start_dt.add(days=history_days) # type: ignore
+        end_dt = start_dt.add(days=history_days)  # type: ignore
 
     elif not start_date and end_date:
         end_dt = pendulum.parse(end_date)
-        start_dt = end_dt.subtract(days=history_days) # type: ignore
+        start_dt = end_dt.subtract(days=history_days)  # type: ignore
 
     else:
-        start_dt = pendulum.parse(start_date) # type: ignore
-        end_dt = pendulum.parse(end_date) # type: ignore
+        start_dt = pendulum.parse(start_date)  # type: ignore
+        end_dt = pendulum.parse(end_date)  # type: ignore
 
     if start_dt > end_dt:  # type: ignore
         raise ValueError("Error : start_date cannot be after end_date.")
