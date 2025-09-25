@@ -5,7 +5,7 @@ from smartcity.database.functions import upsert_measurements
 from smartcity.air_quality.openaq_api import fetch_openaq_data
 
 from prefect import flow, tags, task
-from prefect.logging import get_run_logger
+from prefect.logging import get_run_logger, get_logger
 
 
 @task(retries=3, retry_delay_seconds=10)
@@ -21,7 +21,7 @@ def workflow_openaq():
     ETL flow: fetch air quality data from OpenAQ and upsert into Supabase.
     Designed to run daily via Prefect Cloud.
     """
-    log = get_run_logger()
+    log = get_logger()
     log.info("Starting SmartCity OpenAQ ETL flow ...")
     log.info(f">>> {smartcity.__version__ =  }")
     df = fetch_openaq_data()
