@@ -35,4 +35,4 @@ if not logger.handlers:
     logger.addHandler(console_handler)
 
 # Do not propagate logs to parent loggers (optional, but good practice)
-logger.propagate = False
+logger.propagate = True
