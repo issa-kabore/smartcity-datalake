@@ -6,8 +6,8 @@ import sys
 
 # --- Versioning ---
 __major__ = 0
-__minor__ = 1
-__release__ = 1
+__minor__ = 2
+__release__ = 0
 __pre_release__ = ""
 __version__ = f"{__major__}.{__minor__}.{__release__}{__pre_release__}"
 __author__ = "Issa KAB"
