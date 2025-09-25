@@ -16,7 +16,7 @@ def fetch_openaq() -> pd.DataFrame:
 
 
 @flow(name="SmartCity OpenAQ ETL", log_prints=True)
-def smartcity_openaq_etl():
+def workflow_openaq():
     """
     ETL flow: fetch air quality data from OpenAQ and upsert into Supabase.
     Designed to run daily via Prefect Cloud.
