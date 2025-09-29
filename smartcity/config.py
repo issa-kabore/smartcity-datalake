@@ -2,6 +2,9 @@ from dotenv import load_dotenv
 from smartcity.utils import get_secret
 
 
+COUNTRY = "FRANCE"
+CITY = "CLERMONT FERRAND"
+
 # Load environment variables from .env file
 load_dotenv()
 

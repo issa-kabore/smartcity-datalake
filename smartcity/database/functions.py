@@ -1,9 +1,13 @@
 import pandas as pd
 from supabase import create_client, Client
 from smartcity.config import SUPABASE_URL, SUPABASE_KEY, TABLE_NAME_MEASUREMENTS
-from smartcity import logger
+from smartcity.logger import get_smartcity_logger
 
-UNIQUE_MEASUREMENT = "parameter_name,parameter_units,datetime_from,datetime_to,sensor_id"
+logger = get_smartcity_logger()
+UNIQUE_MEASUREMENT = (
+    "parameter_name,parameter_units,datetime_from,datetime_to,sensor_id"
+)
+
 
 def load_to_supabase(df: pd.DataFrame, table_name: str) -> None:
     """
@@ -103,4 +107,3 @@ def upsert_measurements(data: pd.DataFrame) -> list[dict]:
     except Exception as e:
         logger.error(f"Error upserting measurements to Supabase: {e}")
         raise e
-

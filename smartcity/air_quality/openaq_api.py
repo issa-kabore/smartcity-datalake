@@ -4,10 +4,12 @@ from openaq import OpenAQ
 import pandas as pd
 
 from smartcity.config import OPENAQ_API_KEY, TABLE_NAME_LOCATIONS
-from smartcity import logger
+from smartcity.logger import get_smartcity_logger
 from smartcity.database.functions import read_db
 from smartcity.utils import flatten_and_transform, get_dates_range, get_yesterday_local_range
 
+
+logger = get_smartcity_logger()
 
 def fetch_locations(
     client: OpenAQ, country_code: str = "US", limit: int = 100
