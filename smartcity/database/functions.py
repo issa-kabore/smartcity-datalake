@@ -1,9 +1,10 @@
+from datetime import datetime
+import os
 import pandas as pd
 from supabase import create_client, Client
 from smartcity.config import SUPABASE_URL, SUPABASE_KEY, TABLE_NAME_MEASUREMENTS
-from smartcity.logger import get_smartcity_logger
+from smartcity import logger, LOG_FILE_PATH
 
-logger = get_smartcity_logger()
 UNIQUE_MEASUREMENT = (
     "parameter_name,parameter_units,datetime_from,datetime_to,sensor_id"
 )
@@ -106,4 +107,67 @@ def upsert_measurements(data: pd.DataFrame) -> list[dict]:
 
     except Exception as e:
         logger.error(f"Error upserting measurements to Supabase: {e}")
+        raise e
+
+
+def _upload_logs_to_supabase(log_file: str = ""):
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)  # type: ignore
+
+    bucket_name = "data"
+    path = "smartcity-logs/smartcity.log"
+    file = LOG_FILE_PATH if log_file == "" else log_file
+
+    with open(file, "rb") as f:
+        supabase.storage.from_(bucket_name).upload(file=f, 
+                                                   path=path, 
+                                                   file_options={"upsert": "true"})
+
+
+def upload_logs_to_supabase(
+    log_file: str = "",
+    bucket_name: str = "data",
+    remote_dir: str = "smartcity-logs",
+    remote_name: str = "",
+    upsert: bool = True,
+) -> str:
+    """
+    Upload a local log file to Supabase Storage.
+
+    Args:
+        log_file (str): Local log file path. Defaults to LOG_FILE_PATH if empty.
+        bucket_name (str): Supabase bucket name.
+        remote_dir (str): Folder inside the bucket.
+        remote_name (str): If provided, overrides the default name generation.
+        upsert (bool): Overwrite existing file if True.
+
+    Returns:
+        str: Remote path of the uploaded log file.
+    """
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)  # type: ignore
+    src_file = log_file or LOG_FILE_PATH
+
+    if not os.path.exists(src_file):
+        raise FileNotFoundError(f"Log file not found: {src_file}")
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    if remote_name:
+        base = os.path.splitext(os.path.basename(remote_name))[0]  # sans extension
+    else:
+        base = os.path.splitext(os.path.basename(src_file))[0]
+
+    final_name = f"{base}_{timestamp}.log"
+    remote_path = f"{remote_dir}/{final_name}"
+
+    try:
+        with open(src_file, "rb") as f:
+            supabase.storage.from_(bucket_name).upload(
+                path=remote_path,
+                file=f,
+                file_options={"upsert": str(upsert).lower()},
+            )
+        logger.info(f"Log file uploaded to '{bucket_name}/{remote_path}'")
+        return remote_path
+    except Exception as e:
+        logger.error(f"Failed to upload log file '{src_file}' → {e}")
         raise e

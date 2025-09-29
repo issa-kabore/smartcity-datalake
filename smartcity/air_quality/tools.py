@@ -1,8 +1,5 @@
 import pandas as pd
-from smartcity.logger import get_smartcity_logger
-
-
-logger = get_smartcity_logger()
+from smartcity import logger
 
 
 def clean_locations(df: pd.DataFrame) -> pd.DataFrame:
