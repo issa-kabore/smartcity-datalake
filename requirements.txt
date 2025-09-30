@@ -3,5 +3,5 @@ requests
 streamlit
 openaq
 supabase
-prefect
+prefect>=3.0
 # minio

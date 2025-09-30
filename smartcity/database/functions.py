@@ -1,6 +1,7 @@
-from datetime import datetime
 import os
+import re
 import pandas as pd
+from datetime import datetime
 from supabase import create_client, Client
 from smartcity.config import SUPABASE_URL, SUPABASE_KEY, TABLE_NAME_MEASUREMENTS
 from smartcity import logger, LOG_FILE_PATH
@@ -44,7 +45,7 @@ def load_to_supabase(df: pd.DataFrame, table_name: str) -> None:
 
 
 def read_db(table_name: str) -> pd.DataFrame:
-    """"Retrieves all records from a specified Supabase table and returns them as a pandas DataFrame."""
+    """ "Retrieves all records from a specified Supabase table and returns them as a pandas DataFrame."""
     try:
         if not SUPABASE_URL or not SUPABASE_KEY:
             raise ValueError("Supabase credentials not found in environment variables.")
@@ -71,13 +72,13 @@ def upsert_measurements(data: pd.DataFrame) -> list[dict]:
     """
     Upserts air quality measurements into the Supabase table.
 
-    This function inserts or updates rows in the Supabase `openaq_measurements` table 
-    using the unique constraint defined in `UNIQUE_MEASUREMENT`. 
+    This function inserts or updates rows in the Supabase `openaq_measurements` table
+    using the unique constraint defined in `UNIQUE_MEASUREMENT`.
 
     Args:
         data (pd.DataFrame): DataFrame containing the measurements to upsert.
             Expected columns: [
-                'parameter_name', 'value', 'parameter_units', 
+                'parameter_name', 'value', 'parameter_units',
                 'datetime_from', 'datetime_to', 'period',
                 'summary', 'percent_coverage', 'sensor_id', 'updated_at'
             ]
@@ -101,26 +102,15 @@ def upsert_measurements(data: pd.DataFrame) -> list[dict]:
             .execute()
         )
 
-        logger.info(f"> Upserted '{len(response.data)}' new records into '{TABLE_NAME_MEASUREMENTS}'.")
+        logger.info(
+            f"> Upserted '{len(response.data)}' new records into '{TABLE_NAME_MEASUREMENTS}'."
+        )
 
         return response.data
 
     except Exception as e:
         logger.error(f"Error upserting measurements to Supabase: {e}")
         raise e
-
-
-def _upload_logs_to_supabase(log_file: str = ""):
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)  # type: ignore
-
-    bucket_name = "data"
-    path = "smartcity-logs/smartcity.log"
-    file = LOG_FILE_PATH if log_file == "" else log_file
-
-    with open(file, "rb") as f:
-        supabase.storage.from_(bucket_name).upload(file=f, 
-                                                   path=path, 
-                                                   file_options={"upsert": "true"})
 
 
 def upload_logs_to_supabase(
@@ -159,6 +149,8 @@ def upload_logs_to_supabase(
     final_name = f"{base}_{timestamp}.log"
     remote_path = f"{remote_dir}/{final_name}"
 
+    rotate_logs_supabase(supabase, bucket_name, remote_dir, remote_name)
+
     try:
         with open(src_file, "rb") as f:
             supabase.storage.from_(bucket_name).upload(
@@ -167,7 +159,63 @@ def upload_logs_to_supabase(
                 file_options={"upsert": str(upsert).lower()},
             )
         logger.info(f"Log file uploaded to '{bucket_name}/{remote_path}'")
+
         return remote_path
     except Exception as e:
         logger.error(f"Failed to upload log file '{src_file}' → {e}")
         raise e
+
+
+def rotate_logs_supabase(
+    supabase: Client,
+    bucket_name: str,
+    remote_dir: str,
+    remote_name: str,
+    keep_last: int = 3,
+):
+    """
+    Rotate log files stored in a Supabase storage bucket by keeping only the most recent ones.
+
+    This function scans the given directory inside a Supabase storage bucket for 
+    log files matching a specific naming pattern (e.g., `workflow_openaq_YYYY-MM-DD_HH-MM-SS.log`). 
+    It sorts the logs by their last modification time, keeps the most recent `keep_last` logs, 
+    and deletes the older ones.
+
+    Args:
+        supabase (Client): An authenticated Supabase client.
+        bucket_name (str): The name of the Supabase storage bucket.
+        remote_dir (str): The directory inside the bucket where log files are stored.
+        remote_name (str): Base log filename (e.g., "workflow_openaq.log"). 
+            The rotated files are expected to follow the pattern `<base>_YYYY-MM-DD_HH-MM-SS.log`.
+        keep_last (int, optional): Number of most recent log files to keep. Defaults to 3.
+
+    Example:
+        >>> rotate_logs_supabase(
+        ...     supabase=my_client,
+        ...     bucket_name="data",
+        ...     remote_dir="smartcity-logs",
+        ...     remote_name="workflow_openaq.log",
+        ...     keep_last=5,
+        ... )
+        # Keeps 5 most recent logs and deletes older ones.
+
+    Notes:
+        - The function assumes that log files contain a timestamp suffix in the format 
+          `YYYY-MM-DD_HH-MM-SS`.
+        - Requires that Supabase storage API provides `metadata['lastModified']`.
+    """
+    base = remote_name.replace(".log", "")
+    pattern = re.compile(
+        rf"^{base}_(\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}})\.log$"
+    )
+
+    files = supabase.storage.from_(bucket_name).list(remote_dir)
+    log_files = [f for f in files if pattern.match(f["name"])]
+    log_files.sort(key=lambda x: x["metadata"]["lastModified"], reverse=True)  # type: ignore
+    to_delete = log_files[keep_last:]
+
+    for f in to_delete:
+        supabase.storage.from_(bucket_name).remove([f"{remote_dir}/{f.get('name')}"])
+        logger.debug(f"Deleted old log file: {f.get('name')}")
+
+    logger.info(f"Rotation done. Kept '{keep_last}', deleted {len(to_delete)}.")
