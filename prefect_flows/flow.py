@@ -33,4 +33,4 @@ def workflow_openaq():
     logger.info(f"> Air quality measurements Upserts !")
 
     upload_logs_to_supabase(remote_name="workflow_openaq.log")
-    logger.info(f"Logs Uploaded !")
+    logger.info(f"> Logs Uploaded !")
