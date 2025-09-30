@@ -1,7 +1,7 @@
 import pandas as pd
 
 import smartcity
-from smartcity.database.functions import upload_logs_to_supabase, upsert_measurements
+from smartcity.database import upload_logs_to_supabase, upsert_measurements
 from smartcity.air_quality.openaq_api import fetch_openaq_data
 
 from prefect import flow, tags, task, get_run_logger

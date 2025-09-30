@@ -4,7 +4,7 @@ import sys
 
 # --- Versioning ---
 __major__ = 0
-__minor__ = 4
+__minor__ = 5
 __release__ = 0
 __pre_release__ = ""
 __version__ = f"{__major__}.{__minor__}.{__release__}{__pre_release__}"

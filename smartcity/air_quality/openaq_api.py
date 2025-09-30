@@ -5,7 +5,7 @@ import pandas as pd
 
 from smartcity.config import OPENAQ_API_KEY, TABLE_NAME_LOCATIONS
 from smartcity import logger
-from smartcity.database.functions import read_db
+from smartcity.database import read_db
 from smartcity.utils import flatten_and_transform, get_dates_range, get_yesterday_local_range
 
 
