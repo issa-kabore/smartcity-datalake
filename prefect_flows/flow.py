@@ -2,7 +2,7 @@ from prefect_flows.task import (
     fetch_openaq,
     insert_openaq_data,
     cleanup_table,
-    upload_logs_to_supabase,
+    upload_logs,
 )
 import smartcity
 
@@ -50,7 +50,7 @@ def workflow_openaq():
     cleanup_table(days=30)
     logger.info(f"> Old measurements (< 30 days) deleted successfully.")
 
-    upload_logs_to_supabase(remote_name="workflow_openaq.log")
+    upload_logs(remote_name="workflow_openaq.log")
     logger.info(f"> Logs uploaded to Supabase.")
 
     logger.info("SmartCity OpenAQ ETL flow completed.")
