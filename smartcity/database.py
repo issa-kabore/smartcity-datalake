@@ -1,7 +1,7 @@
 import os
 import re
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from supabase import create_client, Client
 from smartcity.config import SUPABASE_URL, SUPABASE_KEY, TABLE_NAME_MEASUREMENTS
 from smartcity import logger, LOG_FILE_PATH
@@ -90,6 +90,7 @@ def upsert_measurements(data: pd.DataFrame) -> list[dict]:
         Exception: If the Supabase upsert request fails.
     """
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)  # type: ignore
+    logger.debug(">>> Supabase client initialized.")
     measurements = data.to_dict(orient="records")
 
     try:
@@ -176,16 +177,16 @@ def rotate_logs_supabase(
     """
     Rotate log files stored in a Supabase storage bucket by keeping only the most recent ones.
 
-    This function scans the given directory inside a Supabase storage bucket for 
-    log files matching a specific naming pattern (e.g., `workflow_openaq_YYYY-MM-DD_HH-MM-SS.log`). 
-    It sorts the logs by their last modification time, keeps the most recent `keep_last` logs, 
+    This function scans the given directory inside a Supabase storage bucket for
+    log files matching a specific naming pattern (e.g., `workflow_openaq_YYYY-MM-DD_HH-MM-SS.log`).
+    It sorts the logs by their last modification time, keeps the most recent `keep_last` logs,
     and deletes the older ones.
 
     Args:
         supabase (Client): An authenticated Supabase client.
         bucket_name (str): The name of the Supabase storage bucket.
         remote_dir (str): The directory inside the bucket where log files are stored.
-        remote_name (str): Base log filename (e.g., "workflow_openaq.log"). 
+        remote_name (str): Base log filename (e.g., "workflow_openaq.log").
             The rotated files are expected to follow the pattern `<base>_YYYY-MM-DD_HH-MM-SS.log`.
         keep_last (int, optional): Number of most recent log files to keep. Defaults to 3.
 
@@ -200,7 +201,7 @@ def rotate_logs_supabase(
         # Keeps 5 most recent logs and deletes older ones.
 
     Notes:
-        - The function assumes that log files contain a timestamp suffix in the format 
+        - The function assumes that log files contain a timestamp suffix in the format
           `YYYY-MM-DD_HH-MM-SS`.
         - Requires that Supabase storage API provides `metadata['lastModified']`.
     """
@@ -219,3 +220,82 @@ def rotate_logs_supabase(
         logger.debug(f"Deleted old log file: {f.get('name')}")
 
     logger.info(f"Rotation done. Kept '{keep_last}', deleted {len(to_delete)}.")
+
+
+def read_db_between_dates(
+    table_name: str,
+    date_column: str,
+    start_date: str,
+    end_date: str,
+    batch_size: int = 1000,
+) -> pd.DataFrame:
+    """
+    Retrieves rows from a Supabase table where date_column is between start_date and end_date (inclusive).
+    Dates must be strings in 'YYYY-MM-DD' format, or 'YYYY-MM-DD HH:MM:SS' if using timestamps.
+    """
+    try:
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            raise ValueError("Supabase credentials not found in environment variables.")
+
+        logger.debug(
+            f"Retrieving data from '{table_name}' "
+            f"between {start_date} and {end_date} (column: {date_column}) ..."
+        )
+
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.debug(">>> Supabase client initialized.")
+
+        all_rows = []
+        start = 0
+
+        while True:
+            end = start + batch_size - 1
+
+            response = (
+                supabase.table(table_name)
+                .select("*")
+                .gte(date_column, start_date)
+                .lte(date_column, end_date)
+                .range(start, end)
+                .execute()
+            )
+            all_rows.extend(response.data)
+            if not response.data or len(response.data) < batch_size:
+                break
+
+            start += batch_size
+
+        if all_rows:
+            df = pd.DataFrame(all_rows)
+            logger.info(
+                f"Retrieved {len(df)} rows from '{table_name}' "
+                f"between {start_date} and {end_date}."
+            )
+            return df
+        else:
+            logger.warning(
+                f"No data found in '{table_name}' between {start_date} and {end_date}."
+            )
+            return pd.DataFrame()
+
+    except Exception as e:
+        logger.error(f"Error retrieving data from Supabase: {e}")
+        raise e
+
+
+def delete_old_measurements(days: int = 30, table_name: str = "measurements"):
+    """Delete records older than `days` days in Supabase."""
+    try:
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            raise ValueError("Supabase credentials not found in environment variables.")
+
+        logger.debug(f"Deleting records older than {days} days from '{table_name}' ...")
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.debug(">>> Supabase client initialized.")
+
+        response = supabase.rpc("delete_old_measurements", {"days": days}).execute()
+        deleted_count = response.data
+        logger.info(f"Deleted '{deleted_count}' records older than '{days}' days.")
+    except Exception as e:
+        logger.error(f"Error deleting data from Supabase: {e}")
+        raise e
