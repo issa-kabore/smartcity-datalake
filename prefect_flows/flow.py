@@ -47,7 +47,7 @@ def workflow_openaq():
     insert_openaq_data(df)
     logger.info(f"> Air quality measurements Upserted successfully.")
 
-    cleanup_table(days=30)
+    cleanup_table(days=61)
     logger.info(f"> Old measurements (< 30 days) deleted successfully.")
 
     upload_logs()
