@@ -50,7 +50,7 @@ def workflow_openaq():
     cleanup_table(days=30)
     logger.info(f"> Old measurements (< 30 days) deleted successfully.")
 
-    upload_logs(remote_name="workflow_openaq.log")
+    upload_logs()
     logger.info(f"> Logs uploaded to Supabase.")
 
     logger.info("SmartCity OpenAQ ETL flow completed.")
