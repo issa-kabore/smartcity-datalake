@@ -16,3 +16,8 @@ supabase/.env
 
 # Local data
 data/
+
+*.ipynb
+*.logs
+logs
+smartcity.egg-info
