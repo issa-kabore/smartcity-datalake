@@ -1,3 +1,8 @@
+[runner]
+magicEnabled = false
+fastReruns = true
+
+
 [theme]
 primaryColor="#9A6BFF"
 backgroundColor="#0F1123"
