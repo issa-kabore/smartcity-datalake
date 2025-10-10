@@ -1,5 +1,9 @@
+import sys
+import os
 import base64
 import streamlit as st
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from smartcity.st_ui import add_sidebar_title
 
