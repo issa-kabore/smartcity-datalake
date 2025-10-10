@@ -1,5 +1,4 @@
 import streamlit as st
-import os
 
 WEATHER_ICONS = {
     "sun": "☀️",

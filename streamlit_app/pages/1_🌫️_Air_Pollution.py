@@ -8,7 +8,7 @@ import altair as alt
 from smartcity.database import read_db_between_dates, read_db
 from smartcity.config import TABLE_NAME_MEASUREMENTS, TABLE_NAME_LOCATIONS
 from smartcity.utils import get_dates_range
-from utils import POLLUTANTS_INFO, POLLUTANTS_LIMITS, add_sidebar_title
+from smartcity.st_ui import POLLUTANTS_INFO, POLLUTANTS_LIMITS, add_sidebar_title
 
 HIST_DAYS = 31  # 2 * 7 + 1
 

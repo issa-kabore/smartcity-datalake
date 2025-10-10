@@ -1,7 +1,7 @@
 import base64
 import streamlit as st
 
-from utils import add_sidebar_title
+from smartcity.st_ui import add_sidebar_title
 
 
 def set_background(img_file: str, ext: str = "jpg"):

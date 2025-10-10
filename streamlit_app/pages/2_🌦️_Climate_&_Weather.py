@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import coming_soon, add_sidebar_title
+from smartcity.st_ui import coming_soon, add_sidebar_title
 
 
 # ------- main --------
