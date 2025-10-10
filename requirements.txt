@@ -6,3 +6,4 @@ supabase
 prefect>=3.0
 pendulum
 # minio
+-e .
