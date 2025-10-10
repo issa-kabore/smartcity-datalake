@@ -19,6 +19,7 @@ dependencies = [
   "supabase",
   "requests",
   "prefect",
+  "pendulum"
 ]
 
 [tool.setuptools]
